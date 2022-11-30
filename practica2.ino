@@ -20,6 +20,20 @@ FirebaseData firebaseData;
 
 bool iterar = true;
 
+//sensor
+const int trigPin = 14;
+const int echoPin = 12;
+const int  LEDR = 4;
+
+//define sound velocity in cm/uS
+#define SOUND_VELOCITY 0.034
+#define CM_TO_INCH 0.393701
+
+long duration;
+float distanceCm;
+float distanceInch;
+
+
 void setup()
 {
   Serial.begin(115200);
@@ -38,48 +52,63 @@ void setup()
 
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
   Firebase.reconnectWiFi(true);
+  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+  pinMode(LEDR, OUTPUT);
+  digitalWrite(LEDR, LOW);
 }
 
 void loop()
-{
-  String nodo = "Proyecto-iot";
+{ // Clears the trigPin
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin on HIGH state for 10 micro seconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH);
+  
+  // Calculate the distance
+  distanceCm = duration * SOUND_VELOCITY/2;
+  String nodo = "Proyecto-iot-3";
 
-  while (iterar)
+  int prendido = 0;
+  bool presencia;
+
+  if (distanceCm < 20){
+     digitalWrite (LEDR , HIGH);
+     presencia = false; 
+  } else {
+    digitalWrite (LEDR, LOW);
+    presencia = true;
+    prendido = prendido + 1;
+  }
+
+  int entradas = 0;
+
+  while (iterar && entradas < 5);
+
   {
     // set Float  value
-  Firebase.setFloat(firebaseData,"number", 42.0);
+  Firebase.setFloat(firebaseData, nodo +"Distancia",distanceCm);
+  Firebase.setInt(firebaseData, nodo + "Tiempo",prendido);
+  Firebase.setBool(firebaseData, nodo + "Led", presencia);
+  Serial.println("Los datos se escribieron con éxito");
 
-    // escribir datos
-   Firebase.setInt(firebaseData, "Sensor", 800);
-   Firebase.setInt(firebaseData, "Temperatura", 11);
-   Firebase.setString(firebaseData, "Led", "off");
-   Serial.println("Los datos se escribieron con éxito");
-
-    Firebase.setString(firebaseData, nodo + "/sensor", "DHT11");
-    Firebase.setInt(firebaseData, nodo + "/temperatura", 45);
-    Firebase.setBool(firebaseData, nodo + "/alarmas", true);
-
-    // leer datos
-     Firebase.getString(firebaseData, nodo + "/sensor");
-     Serial.print("El sensor es: ");Serial.println(firebaseData.stringData());
-     Firebase.getInt(firebaseData, nodo + "/temperatura");
-     Serial.print("La última temperatura fue: ");Serial.println(firebaseData.intData());
-     delay(250);
-     
-     
-
-    // push de datos
-    Firebase.setString(firebaseData, "Led1", "Hola Mundo!");
     
-    Firebase.pushInt(firebaseData, nodo + "/temperatura", 29);
+    Firebase.pushInt(firebaseData, nodo + "/distancia", distanceCm);
     delay(150);
-    Firebase.pushInt(firebaseData, nodo + "/temperatura", 31);
+    Firebase.pushInt(firebaseData, nodo + "/distancia", distanceCm);
     delay(150);
-    Firebase.pushInt(firebaseData, nodo + "/temperatura", 30);
+    Firebase.pushInt(firebaseData, nodo + "/distancia", distanceCm);
     delay(150);
-    Firebase.pushInt(firebaseData, nodo + "/Humedad", 67);
+    Firebase.pushInt(firebaseData, nodo + "/distancia", distanceCm);
 
-    iterar = false;
-    Firebase.end(firebaseData);
+    entradas += 1;
   }
+
+  iterar = false;
+ Firebase.end(firebaseData);
 } // End Loop
